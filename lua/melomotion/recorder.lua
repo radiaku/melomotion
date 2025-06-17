@@ -33,13 +33,14 @@ end
 
 
 
+
 function M.start()
   if M.recording then return end
   M.recording = true
 
   local key_buffer = ""
   local buffer_time = nil
-  local buffer_timeout = 0.5 -- adjust as needed
+  local buffer_timeout = 0.4  -- shorter timeout
 
   vim.on_key(function(char)
     local mode = vim.api.nvim_get_mode().mode
@@ -48,48 +49,46 @@ function M.start()
     local now = os.clock()
     local display_char = humanize_key(char)
 
-    -- Reset buffer if too much time has passed
+    -- If delay between keys is too long, flush buffer
     if buffer_time and (now - buffer_time > buffer_timeout) then
-      flush_last()
+      if #key_buffer > 0 then
+        table.insert(M.motion_log, {
+          key = key_buffer,
+          time = buffer_time
+        })
+      end
       key_buffer = ""
     end
 
+    key_buffer = key_buffer .. display_char
     buffer_time = now
-    key_buffer = key_buffer .. char
-
-    -- Try to match a mapping (this returns string if exists, else "")
-    local resolved = vim.fn.maparg(key_buffer, "n")
-    if resolved and resolved ~= "" then
-      flush_last()
-      table.insert(M.motion_log, {
-        key = "<map:" .. key_buffer .. ">",
-        time = now,
-      })
-      key_buffer = ""
-      return
-    end
-
-    -- Wait for more keys if mapping is incomplete
-    local possible = vim.fn.mapcheck(key_buffer, "n")
-    if possible ~= "" then
-      return -- a partial match exists, wait
-    end
-
-    -- No mapping matched, treat as normal key
-    flush_last()
-    last_char = display_char
-    last_time = now
-    key_buffer = ""
   end, ns_id)
-end
 
+  -- flush on stop
+  M._flush_buffer = function()
+    if key_buffer and #key_buffer > 0 then
+      local leader = vim.g.mapleader or "\\"
+      local display = key_buffer
+
+      if display:sub(1, #leader) == leader then
+        display = "<leader>" .. display:sub(#leader + 1)
+      end
+
+      table.insert(M.motion_log, {
+        key = display,
+        time = buffer_time
+      })
+    end
+    key_buffer = ""
+  end
+end
 
 
 function M.stop()
   if not M.recording then return end
   M.recording = false
   vim.on_key(nil, ns_id)
-  flush_last() -- capture last group
+  if M._flush_buffer then M._flush_buffer() end
 end
 
 function M.save(filepath)
@@ -100,7 +99,7 @@ function M.save(filepath)
 
   vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
 
-  local f, err = io.open(filepath, "w")
+  local f, err = io.open(filepath, "a+")
   if not f then
     vim.notify("Melomotion: Failed to save to file:\n" .. err, vim.log.levels.ERROR)
     return
@@ -112,6 +111,9 @@ function M.save(filepath)
 
   f:close()
   vim.notify("Melomotion: Saved motion log to:\n" .. filepath)
+
+  -- 🛑 Automatically stop recording after saving
+  M.stop()
 end
 
 return M

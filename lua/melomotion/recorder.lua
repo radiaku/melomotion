@@ -4,24 +4,6 @@ M.motion_log = {}
 
 local ns_id = vim.api.nvim_create_namespace("melomotion")
 
-local function humanize_key(char)
-  -- safely convert to human-readable termcodes (e.g. <Esc>, <CR>)
-  local decoded = vim.api.nvim_replace_termcodes(char, true, false, true)
-
-  if decoded == "\27" then return "<Esc>" end
-  if decoded == "\r" then return "<CR>" end
-  if decoded == "\n" then return "<NL>" end
-  if decoded == "\t" then return "<Tab>" end
-  if decoded == " " then return "<Space>" end
-
-  -- Handle Ctrl keys
-  if #decoded == 1 and vim.fn.char2nr(decoded) < 32 then
-    return string.format("<C-%s>", string.char(vim.fn.char2nr(decoded) + 64))
-  end
-
-  return decoded
-end
-
 function M.start()
   if M.recording then return end
   M.recording = true
@@ -69,8 +51,8 @@ function M.start()
   M._flush_buffer = function()
     if raw_buffer and #raw_buffer > 0 then
       local decoded = vim.fn.keytrans(raw_buffer)
-      vim.notify("[melomotion] 🔵 Final flush on stop/save")
-      vim.notify(("[melomotion] decoded flush: %s"):format(vim.inspect(decoded)))
+      -- vim.notify("[melomotion] 🔵 Final flush on stop/save")
+      -- vim.notify(("[melomotion] decoded flush: %s"):format(vim.inspect(decoded)))
 
       table.insert(M.motion_log, {
         key = decoded,
@@ -98,7 +80,7 @@ function M.save(filepath)
 
   vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
 
-  local f, err = io.open(filepath, "a+")
+  local f, err = io.open(filepath, "a")
   if not f then
     vim.notify("Melomotion: Failed to save to file:\n" .. err, vim.log.levels.ERROR)
     return

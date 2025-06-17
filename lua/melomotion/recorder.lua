@@ -37,7 +37,7 @@ function M.start()
     local now = os.clock()
     raw_buffer = raw_buffer .. char
 
-    local char_decoded = vim.fn.keytrans(char)
+    -- local char_decoded = vim.fn.keytrans(char)
     -- vim.notify(("[melomotion] individual char_decoded: %s"):format(vim.inspect(char_decoded)))
 
     local decoded = vim.fn.keytrans(raw_buffer)

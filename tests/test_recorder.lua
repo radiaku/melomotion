@@ -28,6 +28,15 @@ local function field(name, list)
   end, list or events())
 end
 
+-- Restarts recording in a new empty buffer, which Vim reuses for the next file you open.
+local function restart_in_empty_buffer()
+  child.lua([[
+    require("melomotion.recorder").stop()
+    vim.cmd.enew()
+  ]])
+  start()
+end
+
 local T = MiniTest.new_set({
   hooks = {
     pre_case = function()
@@ -159,6 +168,26 @@ T["switching"]["tabs"] = function()
   eq(field("keys"), { ":tabnew", "gt" })
 end
 
+T["switching"]["to a file opened in the empty buffer it replaces"] = function()
+  restart_in_empty_buffer()
+  local buf = child.api.nvim_get_current_buf()
+  local file = child.lua([[
+    local file = vim.fn.tempname() .. ".txt"
+    vim.fn.writefile({ "one", "two" }, file)
+    return file
+  ]])
+  press(":", "edit " .. file, "<CR>")
+  eq(child.api.nvim_get_current_buf(), buf)
+  eq(field("kind"), { "buffer" })
+end
+
+T["switching"]["not when you name or reload the buffer you're in"] = function()
+  restart_in_empty_buffer()
+  press(":", "write " .. child.fn.tempname(), "<CR>")
+  press(":", "edit!", "<CR>")
+  eq(events(), {})
+end
+
 T["late jumps"] = MiniTest.new_set()
 
 T["late jumps"]["are credited to the keys that asked for them"] = function()
@@ -226,11 +255,66 @@ T["pickers"]["credit the keys that opened them to where they land"] = function()
   eq(e[1].to.line, 2)
 end
 
+T["pickers"]["landing in the empty buffer they replace switch buffers"] = function()
+  restart_in_empty_buffer()
+  press("<Space>p", "two", "<CR>")
+  eq(field("kind"), { "buffer" })
+  eq(field("via"), { "testpicker" })
+end
+
 T["pickers"]["cancelled record nothing"] = function()
   press("<Space>p", "two", "<Esc>", "q")
   press("j")
   eq(field("keys"), { "j" })
   eq(field("via"), {})
+end
+
+T["key-reading plugins"] = MiniTest.new_set({
+  hooks = {
+    pre_case = function()
+      -- Stand-ins for which-key, which reads the rest of a command with getchar() and then
+      -- feeds all of it back to run it, and for flash, which reads a character and jumps.
+      -- Like which-key's, the triggers are buffer-local, so they win over `<Space>ef`.
+      child.lua([[
+        local function which_key(trigger, count)
+          local opts = { buffer = vim.api.nvim_get_current_buf(), nowait = true }
+          local function read()
+            local keys = trigger
+            for _ = 1, count do
+              keys = keys .. vim.fn.getcharstr()
+            end
+            vim.keymap.del("n", trigger, opts)
+            vim.api.nvim_feedkeys(keys, "mit", false)
+            vim.schedule(function() vim.keymap.set("n", trigger, read, opts) end)
+          end
+          vim.keymap.set("n", trigger, read, opts)
+        end
+        which_key(" ", 2)
+        which_key("g", 1)
+        vim.keymap.set("n", "<Space>ef", "<Cmd>normal! 50G<CR>")
+        vim.keymap.set("n", "s", function()
+          vim.fn.getcharstr()
+          vim.api.nvim_win_set_cursor(0, { 20, 0 })
+        end)
+      ]])
+    end,
+  },
+})
+
+T["key-reading plugins"]["that feed the keys back record them once"] = function()
+  press("<Space>", "e", "f")
+  eq(field("keys"), { "<Space>ef" })
+  eq(events()[1].to.line, 50)
+end
+
+T["key-reading plugins"]["that feed back a built-in command record it once"] = function()
+  press("G", "g", "g")
+  eq(field("keys"), { "G", "gg" })
+end
+
+T["key-reading plugins"]["that read keys to jump keep them"] = function()
+  press("s", "s")
+  eq(field("keys"), { "ss" })
 end
 
 T["stop records a movement whose command hasn't ended yet"] = function()

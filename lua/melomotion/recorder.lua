@@ -24,12 +24,14 @@ local MOUSE_MOVE = vim.keycode("<MouseMove>")
 ---@field line integer
 ---@field col integer
 ---@field top integer
+---@field unloaded boolean? Its text was freed since, as `:edit` does to a buffer it reuses.
 
 ---@class melomotion.State
 ---@field emit fun(event: table)
 ---@field async_window integer
 ---@field last melomotion.Location?
 ---@field pending (string|string[])[] Raw typed keys, or { text } for a finished command line.
+---@field waited integer? Bytes in `pending` when a plugin last waited in getchar() for more.
 ---@field orphan { keys: string, via: string?, at: number }? Last keys that moved nothing.
 ---@field via string? Filetype of the float (picker) visited since the last cycle.
 ---@field skip boolean The cursor moved because of an operator or a mode change, not a motion.
@@ -83,12 +85,18 @@ local function public(loc)
   return { file = loc.file, ft = loc.ft, line = loc.line, col = loc.col, top = loc.top }
 end
 
+-- Opening a file from an empty, unnamed buffer reuses that buffer, number and all. It's
+-- unloaded and renamed, where `:e!` only unloads and `:w name` only renames.
+local function same_buffer(from, to)
+  return from.buf == to.buf and not (from.unloaded and from.file ~= to.file)
+end
+
 local function kind_of(from, to)
   if from.tab ~= to.tab then
     return "tab"
   elseif from.win ~= to.win then
     return "window"
-  elseif from.buf ~= to.buf then
+  elseif not same_buffer(from, to) then
     return "buffer"
   elseif from.line ~= to.line or from.col ~= to.col then
     return "cursor"
@@ -105,6 +113,30 @@ local function keys_text(pending)
   return table.concat(out)
 end
 
+-- The keys in `pending` as one string, or nil if it holds a command line.
+local function raw_keys(pending)
+  for _, k in ipairs(pending) do
+    if type(k) ~= "string" then
+      return nil
+    end
+  end
+  return table.concat(pending)
+end
+
+-- A plugin that read keys with getchar(), like which-key, may feed them all back to run them,
+-- so they arrive twice. Keys read after its last wait are its own, so flash's `ss` stays.
+local function drop_replay(pending, waited)
+  local raw = raw_keys(pending)
+  if not raw or #raw % 2 == 1 then
+    return pending
+  end
+  local half = #raw / 2
+  if waited < half and raw:sub(1, half) == raw:sub(half + 1) then
+    return { raw:sub(1, half) }
+  end
+  return pending
+end
+
 local function end_cycle()
   local st = state
   if not st then
@@ -118,6 +150,12 @@ local function end_cycle()
     return
   end
 
+  -- A plugin is waiting in getchar() for the rest of the command.
+  if vim.fn.state():find("S", 1, true) then
+    st.waited = #(raw_keys(st.pending) or "")
+    return
+  end
+
   -- In a picker or popup: keep the keys that opened it for wherever it lands.
   local win = api.nvim_get_current_win()
   if is_float(win) then
@@ -127,15 +165,18 @@ local function end_cycle()
   end
 
   local prev, loc = st.last, locate(win)
-  local pending, via, skip = st.pending, st.via, st.skip
-  st.last, st.pending, st.via, st.skip = loc, {}, nil, false
+  local pending, via, skip, waited = st.pending, st.via, st.skip, st.waited
+  st.last, st.pending, st.via, st.skip, st.waited = loc, {}, nil, false, nil
   if not prev then
     return
+  end
+  if waited then
+    pending = drop_replay(pending, waited)
   end
 
   -- Staying in the same window and buffer, the cursor also moves for edits, operators and
   -- leaving insert or visual mode. None of that is navigation. A picker landing always is.
-  if not via and prev.win == loc.win and prev.buf == loc.buf then
+  if not via and prev.win == loc.win and same_buffer(prev, loc) then
     if skip or prev.tick ~= loc.tick or is_text_mode(mode) then
       return
     end
@@ -234,6 +275,13 @@ local function on_win_enter()
   schedule_end()
 end
 
+local function on_buf_unload(args)
+  local st = state
+  if st and st.last and st.last.buf == args.buf then
+    st.last.unloaded = true
+  end
+end
+
 --- Starts recording. `emit` gets one table per movement.
 ---@param emit fun(event: table)
 ---@param opts? { async_window?: integer }
@@ -264,6 +312,7 @@ function M.start(emit, opts)
   api.nvim_create_autocmd("WinEnter", { group = id, callback = on_win_enter })
   api.nvim_create_autocmd("ModeChanged", { group = id, callback = on_mode_changed })
   api.nvim_create_autocmd("CmdlineLeave", { group = id, callback = on_cmdline_leave })
+  api.nvim_create_autocmd("BufUnload", { group = id, callback = on_buf_unload })
   vim.on_key(on_key, ns)
 end
 

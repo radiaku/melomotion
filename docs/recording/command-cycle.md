@@ -17,6 +17,7 @@ This relies on how Neovim orders things. Measured in a child Neovim 0.10.4:
 - A `vim.schedule` callback queued from `on_key` runs after those autocommands, when Neovim waits for input again.
 - While a command still needs keys (`f` waiting for its character, a count, `<C-w>`, `g`), scheduled callbacks don't run. So `f(` with a pause in between is still one cycle.
 - They do run in operator-pending mode (`d` … `w`) and on the command line. `end_cycle()` returns early in both, because the command isn't done yet.
+- They also run while a plugin waits in `getchar()`. `end_cycle()` returns early then too ([[key-reading-plugins]]).
 
 Comparing locations also removes duplicates. A `<C-d>` fires both `CursorMoved` and `WinScrolled` but records one event. A plugin that hops into another window and back within one command records nothing.
 

@@ -29,5 +29,6 @@ Patterns:
 - `press(...)` sends each argument as its own input with a 10 ms pause, like separate key presses. Use one string (`"2j"`) for keys typed together.
 - To read state right after typing, call `child.lua_get`. Its request is answered only after the scheduled `end_cycle()` has run ([[command-cycle]]).
 - Pickers are tested with a stand-in float. Real Telescope was checked by hand ([[picker-landing]]).
+- which-key and flash are stand-ins too. The which-key one's triggers must be buffer-local, as the real ones are, or a global `<Space>ef` wins and the test passes without exercising anything ([[key-reading-plugins]]).
 
 Until something better exists, check by hand with [[local-dev-loop]].

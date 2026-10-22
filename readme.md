@@ -8,25 +8,11 @@ files from pickers like Telescope. It politely looks away whenever you edit.
 
 Then it plays your session back as a song:
 
-```text
-♫ init.lua (feat. config.lua)
-  Thursday 22 Oct 2026 · 09:14 · 3:12
+![:Melomotion show under a Lua file: a song named after neo-tree, with an intro, three verses, two bridges and an outro](assets/show.png)
 
-[Intro: init.lua]
-♪ j×17 k k k, } } /setup n×4 ♪
-
-[Verse 1: config.lua]
-♪ <Space>ff (TelescopePrompt) ~ gg G gg ♪
-
-[Chorus ×3: init.lua ⇄ config.lua]
-♪ <C-O>  <C-I> ♪
-
-[Outro: init.lua]
-♪ <C-O> ~ j×9 ♫
-```
-
-That's seventeen `j`s in a row, and a chorus of `<C-O>` and `<C-I>` sung three
-times. melomotion isn't judging. The lyrics are.
+That's nineteen `j`s in a row in verse 3, and a bridge that goes three buffers
+left and three back right without stopping. melomotion isn't judging. The
+lyrics are.
 
 ## Who's it for?
 

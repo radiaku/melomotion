@@ -23,6 +23,7 @@ melomotion/
 ├── doc/melomotion.txt           # vimdoc for users
 ├── tests/                       # mini.test cases
 ├── Makefile                     # check, test, lint, fmt
+├── assets/                      # images for the README
 └── docs/                        # this brain; not shipped
 ```
 

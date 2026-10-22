@@ -6,22 +6,27 @@ melomotion is a Neovim plugin that records **how you move**: motions, jumps,
 searches, scrolling, hopping between windows, buffers and tabs, and landing on
 files from pickers like Telescope. It politely looks away whenever you edit.
 
-Then it plays your session back as lyrics:
+Then it plays your session back as a song:
 
 ```text
-── melomotion · 2026-10-22 09:14 · 3m 12s ─────────────────
+♫ init.lua (feat. config.lua)
+  Thursday 22 Oct 2026 · 09:14 · 3:12
 
-♪ lua/app/init.lua
-  j×17  k×3  }  }  /setup  n×4
+[Intro: init.lua]
+♪ j×17 k k k, } } /setup n×4 ♪
 
-♪ lua/app/config.lua   ← <Space>ff (TelescopePrompt)
-  gg  G  gg
+[Verse 1: config.lua]
+♪ <Space>ff (TelescopePrompt) ~ gg G gg ♪
 
-♪ lua/app/init.lua   ← <C-O>
-  j×9
+[Chorus ×3: init.lua ⇄ config.lua]
+♪ <C-O>  <C-I> ♪
+
+[Outro: init.lua]
+♪ <C-O> ~ j×9 ♫
 ```
 
-That's seventeen `j`s in a row. melomotion isn't judging. The lyrics are.
+That's seventeen `j`s in a row, and a chorus of `<C-O>` and `<C-I>` sung three
+times. melomotion isn't judging. The lyrics are.
 
 ## Who's it for?
 

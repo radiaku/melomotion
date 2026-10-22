@@ -18,5 +18,6 @@ Each ADR records one decision and is named `adr-NNNN-short-name`. Its sections a
 - [[adr-0006-minimum-neovim-0-10]]
 - [[adr-0007-mini-test-child-neovim]]
 - [[adr-0008-stylua-and-luacheck]]
-- [[adr-0009-show-recordings-as-lyrics]]
+- [[adr-0009-show-recordings-as-lyrics]] (superseded)
+- [[adr-0010-lyrics-as-a-song-sheet]]
 - [[open-questions]]: not decided yet

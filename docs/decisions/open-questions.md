@@ -10,7 +10,7 @@ updated: 2026-10-22
 
 When one of these is answered, write an ADR ([[decisions]]), remove it from this list, and update the notes that link here.
 
-- **Export.** Whether to add an export for other tools as well as `:Melomotion show` ([[adr-0009-show-recordings-as-lyrics]]). See [[event-schema]].
+- **Export.** Whether to add an export for other tools as well as `:Melomotion show` ([[adr-0010-lyrics-as-a-song-sheet]]). See [[event-schema]].
 - **Old sessions.** Should old files be rotated or capped, or kept forever? See [[storage]].
 - **Distribution.** luarocks (rockspec, `luarocks test`) or git tags only. See [[versioning]].
 - **License.**

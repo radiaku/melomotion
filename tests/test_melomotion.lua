@@ -211,7 +211,8 @@ local function shown()
   return {
     name = child.api.nvim_buf_get_name(0),
     ft = child.bo.filetype,
-    lines = vim.list_slice(child.api.nvim_buf_get_lines(0, 0, -1, false), 2),
+    -- Without the title, the date and the blank line after them.
+    lines = vim.list_slice(child.api.nvim_buf_get_lines(0, 0, -1, false), 4),
   }
 end
 
@@ -225,7 +226,7 @@ T["show"]["opens the session being recorded, including what isn't written yet"] 
   eq(view.ft, "melomotion")
   eq(child.b.current_syntax, "melomotion")
   eq(child.bo.modifiable, false)
-  eq(view.lines[#view.lines], "  j  w")
+  eq(view.lines[#view.lines], "♪ j w ♫")
   eq(#records(), 0)
   -- Showing it again replaces the old view.
   child.cmd("wincmd p")
@@ -243,7 +244,7 @@ T["show"]["opens the newest session when not recording"] = function()
   write_session("20250101-090000-1.jsonl", { "k" })
   write_session("20260101-090000-1.jsonl", { "gg" })
   child.cmd("Melomotion show")
-  eq(shown().lines, { "", "♪ a.lua", "  gg" })
+  eq(shown().lines, { "[Verse 1: a.lua]", "♪ gg ♫" })
 end
 
 T["show"]["pick lets you choose a session"] = function()
@@ -258,7 +259,7 @@ T["show"]["pick lets you choose a session"] = function()
   ]])
   child.cmd("Melomotion show pick")
   eq(child.lua_get("_G.labels"), { "2026-01-01 09:00:00", "2025-01-01 09:00:00" })
-  eq(shown().lines, { "", "♪ a.lua", "  k" })
+  eq(shown().lines, { "[Verse 1: a.lua]", "♪ k ♫" })
 end
 
 T["show"]["says when there are no recordings"] = function()

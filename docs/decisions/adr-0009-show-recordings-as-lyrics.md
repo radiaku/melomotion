@@ -1,6 +1,6 @@
 ---
 title: "ADR 0009: Show recordings as lyrics"
-status: stable
+status: superseded
 tags: [decisions]
 up: "[[decisions]]"
 updated: 2026-10-22
@@ -8,7 +8,7 @@ updated: 2026-10-22
 
 # ADR 0009: Show recordings as lyrics
 
-Accepted 2026-10-22.
+Accepted 2026-10-22. Superseded by [[adr-0010-lyrics-as-a-song-sheet]], which keeps the command and replaces the layout.
 
 ## Context
 

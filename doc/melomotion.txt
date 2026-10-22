@@ -142,30 +142,45 @@ Buffer text is never stored. File paths are, and so are search patterns and
 ==============================================================================
 7. LYRICS                                                  *melomotion-lyrics*
 
-|:Melomotion| show lays a session out like song lyrics. The keys you moved
-with are the words, and each window or file you were in is a verse: >
+|:Melomotion| show lays a session out as a song sheet. Each place you stayed
+is a part of the song, and the keys you moved with are its lyrics: >
 
-  ── melomotion · 2026-10-22 15:23 · 24s ──────────────────
+  ♫ init.lua (feat. config.lua)
+    Thursday 22 Oct 2026 · 09:14 · 3:12
 
-  ♪ neo-tree filesystem [1]   ← <Space>ef
-    k×5  j  k  gg  j×7
+  [Intro: init.lua]
+  ♪ j×17 k k k, } } /setup n×4 ♪
 
-  ♪ docs/conventions/conventions.md   ← o
-    j
+  [Verse 1: config.lua]
+  ♪ <Space>ff (TelescopePrompt) ~ gg G gg ♪
 
-  ♪ deps/mini.nvim/CONTRIBUTING.md   ← <C-H>
-  ♪ docs/conventions/conventions.md   ← <C-L>
+  [Chorus ×3: init.lua ⇄ config.lua]
+  ♪ <C-O>  <C-I> ♪
+
+  [Outro: init.lua]
+  ♪ <C-O> ~ j×9 ♫
 <
-The header has the start time and how long the session ran. A verse starts
-where you started, and again each time you switch tab, window or buffer. It
-is named after where you landed, with the keys that took you there after `←`
-and the picker you came through in parentheses. Files are shown relative to
-the directory the session was recorded in.
+The song is named after the file you moved in most, featuring the runner-up.
+Under the title are the day, the start time and how long the session ran.
 
-Runs of the same keys fold into one word, such as `j×7`. Movements that
-nothing you typed caused are left out.
+A new part starts where you started, and again each time you switch tab,
+window or buffer. It is labelled with the file you landed in:
 
-The lyrics open in a scratch buffer along the bottom, with filetype
+  Verse         a file where you moved around
+  Chorus        a part you repeated. Back-to-back repeats are sung once,
+                with a count, such as `×3`
+  Bridge        files you only passed through, in order
+  Intro, Outro  the first and last parts
+
+A line of lyrics starts with the keys that took you there, then `~`, then the
+keys you moved with. The picker you came through is in parentheses. A pause
+of a second or more is a comma, and three seconds or more starts a new line.
+Up to three repeats of the same keys are spelled out, and more fold into one
+word, such as `j×17`. Movements that nothing you typed caused are left out.
+
+Files are named by file name. Files that share one are shown with their path.
+
+The song opens in a scratch buffer along the bottom, with filetype
 `melomotion`. Press `q` to close it.
 
  vim:tw=78:ts=8:ft=help:norl:

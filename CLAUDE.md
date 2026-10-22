@@ -18,7 +18,7 @@ make lint                                   # luacheck
 nvim --clean --cmd "set rtp^=."             # try this checkout without any user config
 ```
 
-StyLua and luacheck come from Mason. The Makefile adds `~/.local/share/nvim/mason/bin` to `PATH`.
+StyLua and luacheck come from `PATH`, or from `~/.local/share/nvim/mason/bin` when they aren't on it. The Makefile runs them by full path (`STYLUA=`/`LUACHECK=` override).
 
 ## Architecture
 

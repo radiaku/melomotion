@@ -1,8 +1,11 @@
 NVIM ?= nvim
 MINI := deps/mini.nvim
 
-# stylua and luacheck come from Mason when they aren't installed globally.
-export PATH := $(HOME)/.local/share/nvim/mason/bin:$(PATH)
+# stylua and luacheck come from PATH, or from Mason when they aren't on it. Full paths,
+# because make 3.81 (macOS) ignores an exported PATH when it runs a command without a shell.
+MASON_BIN := $(HOME)/.local/share/nvim/mason/bin
+STYLUA ?= $(or $(shell command -v stylua),$(MASON_BIN)/stylua)
+LUACHECK ?= $(or $(shell command -v luacheck),$(MASON_BIN)/luacheck)
 
 .PHONY: check test lint fmt fmt-check
 
@@ -16,10 +19,10 @@ $(MINI):
 	git clone --quiet --filter=blob:none --branch stable https://github.com/nvim-mini/mini.nvim $(MINI)
 
 lint:
-	luacheck lua plugin syntax tests
+	$(LUACHECK) lua plugin syntax tests
 
 fmt:
-	stylua lua plugin syntax tests
+	$(STYLUA) lua plugin syntax tests
 
 fmt-check:
-	stylua --check lua plugin syntax tests
+	$(STYLUA) --check lua plugin syntax tests

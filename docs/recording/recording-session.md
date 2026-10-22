@@ -17,6 +17,7 @@ Recording is opt-in. Nothing is recorded until you start it, unless `autostart` 
 | `:Melomotion toggle` | Start or stop                                       |
 | `:Melomotion save`   | Writes what's waiting and keeps recording           |
 | `:Melomotion status` | Shows the file and how many records are written     |
+| `:Melomotion show`   | Shows a session as lyrics ([[playback]])            |
 
 Each one except `status` has a `<Plug>(melomotion-…)` mapping ([[commands-and-keymaps]]).
 
@@ -24,4 +25,4 @@ Each one except `status` has a `<Plug>(melomotion-…)` mapping ([[commands-and-
 - A session still running when Neovim exits is stopped on `VimLeavePre`.
 - The old `:MelomotionStart` and `:MelomotionSave` are gone ([[adr-0005-merge-into-melomotion]]).
 
-How recordings are read back is still open: [[open-questions]].
+Reading a session back is under [[playback]].

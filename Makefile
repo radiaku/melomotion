@@ -16,10 +16,10 @@ $(MINI):
 	git clone --quiet --filter=blob:none --branch stable https://github.com/nvim-mini/mini.nvim $(MINI)
 
 lint:
-	luacheck lua plugin tests
+	luacheck lua plugin syntax tests
 
 fmt:
-	stylua lua plugin tests
+	stylua lua plugin syntax tests
 
 fmt-check:
-	stylua --check lua plugin tests
+	stylua --check lua plugin syntax tests

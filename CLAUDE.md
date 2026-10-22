@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-melomotion is a Neovim plugin in Lua. It records how you move around Neovim (motions, jumps, searches, scrolling, window, buffer and tab switches, landing from pickers) and ignores editing. It requires Neovim 0.10 or newer. Recording works. Reading recordings back hasn't been built yet. Undecided things are listed in `docs/decisions/open-questions.md`. Don't guess at them: ask, then record the answer as an ADR in `docs/decisions/`.
+melomotion is a Neovim plugin in Lua. It records how you move around Neovim (motions, jumps, searches, scrolling, window, buffer and tab switches, landing from pickers) and ignores editing. It requires Neovim 0.10 or newer. Recording works, and `:Melomotion show` reads a session back as lyrics. Undecided things are listed in `docs/decisions/open-questions.md`. Don't guess at them: ask, then record the answer as an ADR in `docs/decisions/`.
 
 ## Commands
 
@@ -24,7 +24,8 @@ StyLua and luacheck come from Mason. The Makefile adds `~/.local/share/nvim/maso
 
 - `plugin/melomotion.lua` runs at startup for every user. It only defines `:Melomotion` and the `<Plug>(melomotion-…)` maps, and requires modules inside callbacks. A test checks that nothing is loaded at startup.
 - `recorder.lua` turns hooks into movement events and passes each one to an `emit` function. `init.lua` (the public API) pushes them into a `storage.lua` session, which writes JSON Lines to `stdpath("state")/melomotion/`. The recorder knows nothing about files, which is why its tests use an in-memory `emit`.
-- `command.lua` owns the `:Melomotion` subcommands and every user message. The API stays silent.
+- `command.lua` owns the `:Melomotion` subcommands, every user message and the lyrics buffer. The API stays silent.
+- Reading back: `storage.read()` decodes a file, `lyrics.lua` (pure, records in, lines out) lays it out, and `command.lua` shows it. `docs/playback/` has the layout rules.
 
 ## How recording works
 

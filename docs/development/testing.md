@@ -22,7 +22,8 @@ make test FILE=tests/test_recorder.lua CASE="edits are not recorded"
 | File                      | Covers |
 | ------------------------- | ------ |
 | `tests/test_recorder.lua` | [[recording]] rules, with an in-memory `emit` |
-| `tests/test_melomotion.lua` | session files, options, `:Melomotion`, `<Plug>` maps, health, help tags |
+| `tests/test_melomotion.lua` | session files, options, `:Melomotion` (including `show`), `<Plug>` maps, health, help tags |
+| `tests/test_lyrics.lua`   | [[lyrics-view]] layout, from hand-written records |
 
 Patterns:
 

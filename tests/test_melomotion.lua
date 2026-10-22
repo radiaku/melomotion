@@ -155,13 +155,28 @@ T["command"]["starts, reports and stops"] = function()
 end
 
 T["command"]["completes subcommands"] = function()
-  eq(child.fn.getcompletion("Melomotion s", "cmdline"), { "start", "stop", "save", "status" })
+  eq(
+    child.fn.getcompletion("Melomotion s", "cmdline"),
+    { "start", "stop", "save", "status", "show" }
+  )
+  eq(child.fn.getcompletion("Melomotion show ", "cmdline"), { "pick" })
+  eq(child.fn.getcompletion("Melomotion stop ", "cmdline"), {})
 end
 
 T["command"]["rejects unknown subcommands"] = function()
   child.cmd("Melomotion nope")
   eq(vim.startswith(child.lua_get("_G.notes[1][1]"), "melomotion: unknown subcommand 'nope'"), true)
   eq(child.lua_get("_G.notes[1][2]"), child.lua_get("vim.log.levels.ERROR"))
+end
+
+T["command"]["rejects arguments a subcommand doesn't take"] = function()
+  child.cmd("Melomotion start now")
+  child.cmd("Melomotion show pick twice")
+  eq(child.lua_get("vim.tbl_map(function(n) return n[1] end, _G.notes)"), {
+    "melomotion: bad argument for 'start', it takes none",
+    "melomotion: bad argument for 'show', expected pick",
+  })
+  eq(child.lua_get("require('melomotion').is_recording()"), false)
 end
 
 T["command"]["toggles through a <Plug> mapping"] = function()
@@ -171,6 +186,99 @@ T["command"]["toggles through a <Plug> mapping"] = function()
   eq(child.lua_get("require('melomotion').is_recording()"), true)
   press("<F2>")
   eq(child.lua_get("require('melomotion').is_recording()"), false)
+end
+
+T["show"] = MiniTest.new_set()
+
+-- Writes a session file to the test's directory, with one move per key.
+local function write_session(name, keys)
+  child.lua(
+    [[
+      local name, keys = ...
+      local at = { file = "/p/a.lua", ft = "lua", line = 1, col = 0, top = 1 }
+      local lines = { vim.json.encode({ kind = "start", t = 0, cwd = "/p" }) }
+      for _, k in ipairs(keys) do
+        table.insert(lines, vim.json.encode({ kind = "cursor", t = 1, keys = k, from = at, to = at }))
+      end
+      vim.fn.mkdir(_G.dir, "p")
+      vim.fn.writefile(lines, _G.dir .. "/" .. name)
+    ]],
+    { name, keys }
+  )
+end
+
+local function shown()
+  return {
+    name = child.api.nvim_buf_get_name(0),
+    ft = child.bo.filetype,
+    lines = vim.list_slice(child.api.nvim_buf_get_lines(0, 0, -1, false), 2),
+  }
+end
+
+T["show"]["opens the session being recorded, including what isn't written yet"] = function()
+  setup()
+  child.cmd("Melomotion start")
+  press("j", "w")
+  child.cmd("Melomotion show")
+  local view = shown()
+  eq(vim.startswith(view.name, "melomotion://"), true)
+  eq(view.ft, "melomotion")
+  eq(child.b.current_syntax, "melomotion")
+  eq(child.bo.modifiable, false)
+  eq(view.lines[#view.lines], "  j  w")
+  eq(#records(), 0)
+  -- Showing it again replaces the old view.
+  child.cmd("wincmd p")
+  child.cmd("Melomotion show")
+  local views = child.lua([[
+    return #vim.tbl_filter(function(b)
+      return vim.startswith(vim.api.nvim_buf_get_name(b), "melomotion://")
+    end, vim.api.nvim_list_bufs())
+  ]])
+  eq(views, 1)
+end
+
+T["show"]["opens the newest session when not recording"] = function()
+  setup()
+  write_session("20250101-090000-1.jsonl", { "k" })
+  write_session("20260101-090000-1.jsonl", { "gg" })
+  child.cmd("Melomotion show")
+  eq(shown().lines, { "", "♪ a.lua", "  gg" })
+end
+
+T["show"]["pick lets you choose a session"] = function()
+  setup()
+  write_session("20250101-090000-1.jsonl", { "k" })
+  write_session("20260101-090000-1.jsonl", { "gg" })
+  child.lua([[
+    vim.ui.select = function(items, opts, choose)
+      _G.labels = vim.tbl_map(opts.format_item, items)
+      choose(items[2])
+    end
+  ]])
+  child.cmd("Melomotion show pick")
+  eq(child.lua_get("_G.labels"), { "2026-01-01 09:00:00", "2025-01-01 09:00:00" })
+  eq(shown().lines, { "", "♪ a.lua", "  k" })
+end
+
+T["show"]["says when there are no recordings"] = function()
+  setup()
+  child.cmd("Melomotion show")
+  child.cmd("Melomotion show pick")
+  local notes = child.lua_get("vim.tbl_map(function(n) return n[1] end, _G.notes)")
+  eq(#notes, 2)
+  eq(vim.startswith(notes[1], "melomotion: no recordings yet in "), true)
+  eq(notes[1], notes[2])
+end
+
+T["show"]["closes with q"] = function()
+  setup()
+  write_session("20260101-090000-1.jsonl", { "gg" })
+  child.cmd("Melomotion show")
+  eq(#child.api.nvim_list_wins(), 2)
+  press("q")
+  eq(#child.api.nvim_list_wins(), 1)
+  eq(vim.startswith(child.api.nvim_buf_get_name(0), "melomotion://"), false)
 end
 
 T["help tags resolve"] = function()

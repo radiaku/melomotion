@@ -9,6 +9,7 @@ CONTENTS                                                 *melomotion-contents*
   4. Configuration ................................. |melomotion-config|
   5. Lua API ....................................... |melomotion-api|
   6. Recordings .................................... |melomotion-recordings|
+  7. Lyrics ........................................ |melomotion-lyrics|
 
 ==============================================================================
 1. INTRODUCTION                                             *melomotion-intro*
@@ -33,6 +34,9 @@ Requires Neovim 0.10 or newer. Run `:checkhealth melomotion` to check.
 :Melomotion toggle      Start or stop.
 :Melomotion save        Write what's recorded so far and keep recording.
 :Melomotion status      Show the session file and how much is written.
+:Melomotion show        Show the session being recorded, or else the newest
+                        one, as lyrics. See |melomotion-lyrics|.
+:Melomotion show pick   Choose a session to show, with |vim.ui.select()|.
 
 A running session is also stopped and written when Neovim exits.
 
@@ -45,6 +49,7 @@ melomotion sets no keymaps. Bind these instead:
   <Plug>(melomotion-stop)                           *<Plug>(melomotion-stop)*
   <Plug>(melomotion-toggle)                       *<Plug>(melomotion-toggle)*
   <Plug>(melomotion-save)                           *<Plug>(melomotion-save)*
+  <Plug>(melomotion-show)                           *<Plug>(melomotion-show)*
 
 Example: >lua
   vim.keymap.set("n", "<leader>mm", "<Plug>(melomotion-toggle)")
@@ -95,6 +100,16 @@ require("melomotion").status()                           *melomotion.status()*
 require("melomotion").is_recording()               *melomotion.is_recording()*
     Returns true while a session is running.
 
+require("melomotion").sessions()                       *melomotion.sessions()*
+    Returns the session files, newest first. The running session is
+    included even before anything is written.
+
+require("melomotion").read({path})                         *melomotion.read()*
+    Returns a session's records (see |melomotion-recordings|) and its path.
+    Without {path}: the running session, or else the newest. Records still
+    waiting to be written are included. Returns nil if there are no
+    sessions.
+
 ==============================================================================
 6. RECORDINGS                                          *melomotion-recordings*
 
@@ -123,5 +138,34 @@ Example (one line, wrapped here): >json
 <
 Buffer text is never stored. File paths are, and so are search patterns and
 `:` commands that moved you. Recordings are only written to `dir`.
+
+==============================================================================
+7. LYRICS                                                  *melomotion-lyrics*
+
+|:Melomotion| show lays a session out like song lyrics. The keys you moved
+with are the words, and each window or file you were in is a verse: >
+
+  ── melomotion · 2026-10-22 15:23 · 24s ──────────────────
+
+  ♪ neo-tree filesystem [1]   ← <Space>ef
+    k×5  j  k  gg  j×7
+
+  ♪ docs/conventions/conventions.md   ← o
+    j
+
+  ♪ deps/mini.nvim/CONTRIBUTING.md   ← <C-H>
+  ♪ docs/conventions/conventions.md   ← <C-L>
+<
+The header has the start time and how long the session ran. A verse starts
+where you started, and again each time you switch tab, window or buffer. It
+is named after where you landed, with the keys that took you there after `←`
+and the picker you came through in parentheses. Files are shown relative to
+the directory the session was recorded in.
+
+Runs of the same keys fold into one word, such as `j×7`. Movements that
+nothing you typed caused are left out.
+
+The lyrics open in a scratch buffer along the bottom, with filetype
+`melomotion`. Press `q` to close it.
 
  vim:tw=78:ts=8:ft=help:norl:

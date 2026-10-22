@@ -10,7 +10,7 @@ updated: 2026-10-22
 
 When one of these is answered, write an ADR ([[decisions]]), remove it from this list, and update the notes that link here.
 
-- **Reading recordings back.** This is the next feature. Options are an in-editor report (`:Melomotion report`), an export for other tools, or both. See [[recording-session]] and [[event-schema]].
+- **Export.** Whether to add an export for other tools as well as `:Melomotion show` ([[adr-0009-show-recordings-as-lyrics]]). See [[event-schema]].
 - **Old sessions.** Should old files be rotated or capped, or kept forever? See [[storage]].
 - **Distribution.** luarocks (rockspec, `luarocks test`) or git tags only. See [[versioning]].
 - **License.**

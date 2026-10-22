@@ -10,7 +10,7 @@ updated: 2026-10-22
 
 The plugin keeps its own startup cost close to zero, so it works the same whether or not the plugin manager lazy-loads it.
 
-- `plugin/melomotion.lua` only creates `:Melomotion` and four `<Plug>` mappings ([[commands-and-keymaps]]).
+- `plugin/melomotion.lua` only creates `:Melomotion` and five `<Plug>` mappings ([[commands-and-keymaps]]).
 - Their callbacks, including command completion, call `require("melomotion.command")` inside the function body, so a module loads on first use.
 - `plugin/` never requires a module at the top level. A test checks that `package.loaded["melomotion"]` is still nil after startup.
 - It guards against being sourced twice with `vim.g.loaded_melomotion`.

@@ -103,6 +103,34 @@ function M.save()
   return { path = session.path, written = session.written }
 end
 
+--- Session files, newest first. The one being recorded is included even before its first
+--- write.
+---@return string[]
+function M.sessions()
+  local files = require("melomotion.storage").list(config.get().dir)
+  if session and not vim.tbl_contains(files, session.path) then
+    table.insert(files, 1, session.path)
+  end
+  return files
+end
+
+--- Reads a session's records. Leave `path` out for the one being recorded or, if none is,
+--- the newest. A running session's records that aren't written yet are included.
+---@param path? string
+---@return table[]? records nil when there are no sessions.
+---@return string? path
+function M.read(path)
+  path = path or M.sessions()[1]
+  if not path then
+    return nil
+  end
+  local records = require("melomotion.storage").read(path)
+  if session and path == session.path then
+    vim.list_extend(records, session.buffer)
+  end
+  return records, path
+end
+
 ---@return boolean
 function M.is_recording()
   return session ~= nil

@@ -31,6 +31,38 @@ function M.open(dir)
   return setmetatable({ path = vim.fs.joinpath(dir, name), buffer = {}, written = 0 }, Session)
 end
 
+--- Session files in `dir`, newest first.
+---@param dir string
+---@return string[]
+function M.list(dir)
+  local files = vim.fn.glob(vim.fs.joinpath(dir, "*.jsonl"), false, true)
+  -- Names start with the date and time, so sorting by name sorts by age.
+  table.sort(files, function(a, b)
+    return a > b
+  end)
+  return files
+end
+
+--- Reads a session file. A missing file has no records. A line that isn't valid JSON, such
+--- as one cut short by a crash, is skipped.
+---@param path string
+---@return table[]
+function M.read(path)
+  local records = {}
+  local file = io.open(path, "r")
+  if not file then
+    return records
+  end
+  for line in file:lines() do
+    local ok, record = pcall(vim.json.decode, line)
+    if ok and type(record) == "table" then
+      records[#records + 1] = record
+    end
+  end
+  file:close()
+  return records
+end
+
 --- Stamps `record` with the current time and queues it.
 ---@param record table
 function Session:push(record)

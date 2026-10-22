@@ -1,0 +1,127 @@
+*melomotion.txt*  Record how you move around Neovim, not what you edit
+
+==============================================================================
+CONTENTS                                                 *melomotion-contents*
+
+  1. Introduction .................................. |melomotion-intro|
+  2. Commands ...................................... |melomotion-commands|
+  3. Mappings ...................................... |melomotion-mappings|
+  4. Configuration ................................. |melomotion-config|
+  5. Lua API ....................................... |melomotion-api|
+  6. Recordings .................................... |melomotion-recordings|
+
+==============================================================================
+1. INTRODUCTION                                             *melomotion-intro*
+
+melomotion records the keys you use to move around and where they take you:
+motions, jumps, searches, scrolling, switching windows, buffers and tabs, and
+opening files through pickers such as Telescope. Moving a visual selection
+counts too. Editing is left out: text changes, insert mode and operators
+(including yank) are never recorded.
+
+Nothing is recorded until you run |:Melomotion| start, or set `autostart`.
+Recordings stay on your machine, see |melomotion-recordings|.
+
+Requires Neovim 0.10 or newer. Run `:checkhealth melomotion` to check.
+
+==============================================================================
+2. COMMANDS                                              *melomotion-commands*
+
+                                                                 *:Melomotion*
+:Melomotion start       Start a recording session. Each session is one file.
+:Melomotion stop        Stop recording and write everything left.
+:Melomotion toggle      Start or stop.
+:Melomotion save        Write what's recorded so far and keep recording.
+:Melomotion status      Show the session file and how much is written.
+
+A running session is also stopped and written when Neovim exits.
+
+==============================================================================
+3. MAPPINGS                                              *melomotion-mappings*
+
+melomotion sets no keymaps. Bind these instead:
+
+  <Plug>(melomotion-start)                         *<Plug>(melomotion-start)*
+  <Plug>(melomotion-stop)                           *<Plug>(melomotion-stop)*
+  <Plug>(melomotion-toggle)                       *<Plug>(melomotion-toggle)*
+  <Plug>(melomotion-save)                           *<Plug>(melomotion-save)*
+
+Example: >lua
+  vim.keymap.set("n", "<leader>mm", "<Plug>(melomotion-toggle)")
+<
+==============================================================================
+4. CONFIGURATION                                           *melomotion-config*
+
+Calling setup() is optional. Options left out keep their defaults: >lua
+  require("melomotion").setup({
+    autostart = false,
+    dir = vim.fn.stdpath("state") .. "/melomotion",
+    flush_interval = 60000,
+    max_buffered = 500,
+    async_window = 2000,
+  })
+<
+  autostart         Start recording when setup() runs.
+  dir               Directory for session files. `~` is expanded.
+  flush_interval    Milliseconds between writes to disk. 0 writes only on
+                    save, stop and exit.
+  max_buffered      Write early once this many records are waiting.
+  async_window      Milliseconds during which a jump that arrives late, such
+                    as an LSP go-to-definition, is still credited to the keys
+                    that asked for it.
+
+An unknown option or a value of the wrong type is reported, and the previous
+options stay in place.
+
+==============================================================================
+5. LUA API                                                    *melomotion-api*
+
+require("melomotion").setup({opts})                       *melomotion.setup()*
+    Set options, see |melomotion-config|.
+
+require("melomotion").start()                             *melomotion.start()*
+    Start recording. Returns the session file path, or nil and an error.
+
+require("melomotion").stop()                               *melomotion.stop()*
+    Stop recording. Returns `{ path, written }`, or nil if nothing was
+    recording.
+
+require("melomotion").save()                               *melomotion.save()*
+    Write what's waiting. Returns `{ path, written }`, or nil.
+
+require("melomotion").status()                           *melomotion.status()*
+    Returns `{ recording, path, written, buffered }`.
+
+require("melomotion").is_recording()               *melomotion.is_recording()*
+    Returns true while a session is running.
+
+==============================================================================
+6. RECORDINGS                                          *melomotion-recordings*
+
+Each session is a JSON Lines file in `dir`, named `YYYYMMDD-HHMMSS-<pid>.jsonl`.
+Every line has `t` (milliseconds since the Unix epoch) and `kind`.
+
+The first line has kind `start`, with `nvim` (version) and `cwd`. The last has
+kind `stop`. Every line in between is a movement, and its kind is the biggest
+thing that changed: `tab`, `window`, `buffer`, `cursor` or `scroll`.
+
+Movement fields:
+  keys      What you typed, such as `2j`, `<C-W>v` or `<Space>ff`, or the full
+            command line for `:` and searches, such as `:42` or `/foo`. Empty
+            when nothing you typed caused it.
+  mode      `n`, or `v`, `V`, `^V` while moving a visual selection.
+  from      Where you were: `{ file, ft, line, col, top }`. `col` counts bytes
+  to        from 0. `top` is the first line on screen.
+  via       Filetype of the picker or float you went through, if any.
+  async     true when the keys were credited to a late jump.
+
+Example (one line, wrapped here): >json
+  {"t":1761120000123,"kind":"buffer","keys":"<Space>ff","mode":"n",
+   "via":"TelescopePrompt","from":{"file":"/p/readme.md","ft":"markdown",
+   "line":1,"col":0,"top":1},"to":{"file":"/p/init.lua","ft":"lua",
+   "line":1,"col":0,"top":1}}
+<
+Buffer text is never stored. File paths are, and so are search patterns and
+`:` commands that moved you. Recordings are only written to `dir`.
+
+ vim:tw=78:ts=8:ft=help:norl:

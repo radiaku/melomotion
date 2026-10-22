@@ -1,6 +1,6 @@
 ---
 title: Recording cost
-status: planned
+status: stable
 tags: [recording]
 up: "[[recording]]"
 updated: 2026-10-22
@@ -8,14 +8,15 @@ updated: 2026-10-22
 
 # Recording cost
 
-`vim.on_key` runs on every key press, and `CursorMoved` runs on almost every one. Anything slow in them shows up as typing lag.
+`vim.on_key` runs on every key press, so anything slow there shows up as typing lag.
 
-- Inside these hooks, only append a small table to an in-memory list. No file I/O, no `vim.fn` calls that touch the filesystem, no string formatting beyond what's needed.
-- Write to disk off the hot path: on `:Melomotion save`, on `:Melomotion stop`, on `VimLeavePre`, or from a `vim.uv` timer ([[storage]]).
-- Cap the in-memory list. If it fills up before a flush, flush early rather than grow forever.
-- When recording is off, no hooks are registered at all. Detach them with `vim.on_key(nil, ns)` and delete the autocommand group.
+- **Per key:** `on_key` makes one `nvim_get_mode()` call, appends to a list (capped at 64 keys per command), and schedules at most one callback per command.
+- **Per command:** `end_cycle()` takes a location snapshot of about ten API calls. It does no I/O.
+- **Autocommands:** they only set the scheduled flag.
+- **Disk:** writes happen in `storage.flush()`, on save, stop and `VimLeavePre`, every `flush_interval`, or when `max_buffered` records are waiting. Even that last case is scheduled, never done inline.
+- **When stopped:** no hooks exist at all. `vim.on_key(nil, ns)` runs and the augroup is deleted. A test checks this.
 
 ## Related
 
-- [[lazy-loading]]: the same rule applied at startup
-- [[recording-session]]
+- [[lazy-loading]]: the same idea applied to startup
+- [[command-cycle]]

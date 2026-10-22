@@ -2,51 +2,52 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project state
+## Project
 
-melomotion is a Neovim plugin written in Lua. It records how you move around Neovim (motions, jumps, searches, buffer, window and tab switches, opening files through pickers) and ignores editing, so you can see how you reach things when you aren't changing text. There's no code yet, only this file and `docs/`. Several things are still undecided, including the minimum Neovim version, the tooling and the storage format. They're listed in `docs/decisions/open-questions.md`. Don't guess at them. Ask, then record each answer as an ADR in `docs/decisions/`.
+melomotion is a Neovim plugin in Lua. It records how you move around Neovim (motions, jumps, searches, scrolling, window, buffer and tab switches, landing from pickers) and ignores editing. It requires Neovim 0.10 or newer. Recording works. Reading recordings back hasn't been built yet. Undecided things are listed in `docs/decisions/open-questions.md`. Don't guess at them: ask, then record the answer as an ADR in `docs/decisions/`.
 
 ## Commands
 
-There's no formatter, linter or test runner yet (candidates are in `docs/development/tooling.md`). Once one is added, put its exact commands here, including how to run a single test.
-
-Until then:
-
 ```sh
-nvim --clean --cmd "set rtp^=."   # run this checkout on its own, without your config
+make check                                  # fmt-check + lint + test; run before committing
+make test                                   # all tests (the first run clones mini.nvim into deps/)
+make test FILE=tests/test_recorder.lua      # one file
+make test CASE="pickers"                    # cases whose "file set case" name contains the text
+make fmt                                    # StyLua in place
+make lint                                   # luacheck
+nvim --clean --cmd "set rtp^=."             # try this checkout without any user config
 ```
 
-Run `:checkhealth melomotion` once `lua/melomotion/health.lua` exists.
+StyLua and luacheck come from Mason. The Makefile adds `~/.local/share/nvim/mason/bin` to `PATH`.
 
-## Architecture (planned)
+## Architecture
 
-The layout follows Neovim's guide for Lua plugins (`:help lua-plugin`). Details are in `docs/architecture/`.
+- `plugin/melomotion.lua` runs at startup for every user. It only defines `:Melomotion` and the `<Plug>(melomotion-…)` maps, and requires modules inside callbacks. A test checks that nothing is loaded at startup.
+- `recorder.lua` turns hooks into movement events and passes each one to an `emit` function. `init.lua` (the public API) pushes them into a `storage.lua` session, which writes JSON Lines to `stdpath("state")/melomotion/`. The recorder knows nothing about files, which is why its tests use an in-memory `emit`.
+- `command.lua` owns the `:Melomotion` subcommands and every user message. The API stays silent.
 
-- `plugin/melomotion.lua` runs at startup for every user. It only defines user commands and `<Plug>` mappings, and it requires modules inside callbacks, never at the top level.
-- `require("melomotion")` (`lua/melomotion/init.lua`) is the public API. Every other module under `lua/melomotion/` is internal.
-- `setup(opts)` is optional. It only merges user options over the defaults in `lua/melomotion/config.lua`, and calling it twice must be safe.
-- There are no default keymaps. The plugin exposes `<Plug>(melomotion-…)` mappings instead.
-- `doc/melomotion.txt` is user help (vimdoc, `:help melomotion`) and ships with the plugin. `docs/` is the maintainers' brain and doesn't ship. A user-visible change updates `doc/`. A change in design or rationale updates `docs/`.
+## How recording works
 
-## Recording model (planned)
+Details and the reasoning behind each rule are in `docs/recording/`.
 
-Details are in `docs/recording/`.
+- **One event per finished command.** The first key of a command schedules `end_cycle()`, which compares the current location (tab, window, buffer, cursor, top line) with the last one. Scheduled callbacks run only after the command has finished and its `CursorMoved`/`WinScrolled` have fired. They never run between `f` and `(`. The exceptions are operator-pending and command-line mode, where `end_cycle()` returns early.
+- **Keys come from `on_key`'s `typed` argument.** That's what was pressed. Keys from mappings and macros arrive with `typed` empty and are ignored. Keys typed in insert, terminal, cmdline and prompt modes are text, so they're skipped. `CmdlineLeave` swaps a typed `:`, `/` or `?` for the full line.
+- **Edits are filtered out.** In the same window and buffer, a cycle is dropped if `changedtick` moved, if `ModeChanged` flagged an operator or leaving insert or visual mode, or if the mode is insert. Window and buffer switches are never filtered.
+- **Pickers.** While the current window is a float, keys are kept and its filetype becomes `via`. The landing gets both. Keys that moved nothing are kept for `async_window` ms, so a late jump such as LSP `gd` gets them, marked `async`.
+- **Cost.** These hooks run on nearly every key. Keep `on_key` and the autocommands to flag-setting and appends, and do no I/O outside `storage.flush()`.
 
-- Two kinds of hook work together: `vim.on_key` gives the keys that caused a movement, and autocommands (`CursorMoved`, `WinScrolled`, `BufEnter`, `WinEnter`, `TabEnter`, `CmdlineLeave` for `/` and `?`) give its effect. A movement event takes the keys buffered since the previous one.
-- Edits are left out in two ways. `CursorMoved` never fires in insert mode, and a move made while `b:changedtick` changed comes from an edit, so it's dropped.
-- These hooks fire on nearly every key press. Inside them, only append to an in-memory list. Do file I/O on save, on stop, on `VimLeavePre` or from a timer. When recording is off, no hooks are registered at all.
-- Recording is opt-in through `:Melomotion start`, `:Melomotion stop` and `:Melomotion save`. Recordings stay local under `stdpath("data")/melomotion/`.
+The record format is documented twice: `docs/recording/event-schema.md` and `:help melomotion-recordings` in `doc/melomotion.txt`. Change both together.
+
+## Testing
+
+Tests use mini.test with a child Neovim per case, and keys are typed through `child.type_keys`. That's real input, so they exercise the actual event-loop ordering. `press("f", "(")` sends separate inputs with a pause. `press("2j")` sends them together. Late-jump and timer tests sleep 50–250 ms. If one turns flaky, widen the margin rather than adding retries.
 
 ## docs/ brain
 
-`docs/` is a tree of atomic notes linked with Obsidian-style `[[wikilinks]]`. Start at `docs/index.md`, follow the hubs down, and read only the notes the task needs.
+`docs/` is a tree of atomic notes linked with Obsidian-style `[[wikilinks]]`, for maintainers. User docs are vimdoc in `doc/`. Start at `docs/index.md` and read only the notes the task needs.
 
-Rules for editing it (full version in `docs/meta/note-rules.md`):
-
-- One idea per note, short enough to fit on one screen.
-- File names are kebab-case and unique across all of `docs/`, because wikilinks resolve by name, not path.
-- Every note has frontmatter with `title`, `status` (`planned` / `draft` / `stable` / `superseded`), `tags`, `up: "[[hub]]"` and `updated`.
-- Each hub is named after its folder (`architecture/architecture.md`). Add every new note to its hub.
+- One idea per note. File names are kebab-case and unique across `docs/`, because wikilinks resolve by name.
+- Frontmatter: `title`, `status` (`planned` / `draft` / `stable` / `superseded`), `tags`, `up: "[[hub]]"` and `updated`. Each hub is named after its folder and lists every note in it.
 - After renaming a note, run `grep -rn "\[\[old-name" docs/` and fix every link.
-- When a code change makes a note wrong, fix the note in the same commit and bump `updated`.
+- When code makes a note wrong, fix the note in the same commit and bump `updated`.
 - Never edit an accepted ADR. Write a new one and mark the old one `superseded`.

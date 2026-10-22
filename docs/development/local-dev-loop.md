@@ -1,6 +1,6 @@
 ---
 title: Local dev loop
-status: planned
+status: stable
 tags: [development]
 up: "[[development]]"
 updated: 2026-10-22
@@ -26,8 +26,12 @@ The radia config (`~/Dev/personal/nvim`) loads local plugins through lazy.nvim `
 return {
   dir = "~/Dev/personal/melomotion",
   name = "melomotion",
+  lazy = false,
+  opts = {},
 }
 ```
+
+The old spec's `cmd = { "MelomotionStart", ... }` list no longer matches anything ([[adr-0005-merge-into-melomotion]]).
 
 After a change, restart Neovim or run `:Lazy reload melomotion`.
 

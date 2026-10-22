@@ -1,6 +1,6 @@
 ---
 title: Conventions
-status: planned
+status: stable
 tags: [hub, conventions]
 up: "[[index]]"
 updated: 2026-10-22

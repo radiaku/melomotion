@@ -1,6 +1,6 @@
 ---
 title: Storage
-status: planned
+status: stable
 tags: [recording]
 up: "[[recording]]"
 updated: 2026-10-22
@@ -8,12 +8,9 @@ updated: 2026-10-22
 
 # Storage
 
-Proposed default (format not final, see [[open-questions]]):
+- **Where:** `stdpath("state")/melomotion/`, which is `~/.local/state/nvim/melomotion/` on macOS and Linux. The `dir` option changes it. It's state rather than data because it's a log, and the old melomotion used state too.
+- **Files:** one per session, named `YYYYMMDD-HHMMSS-<pid>.jsonl`. The pid keeps two Neovims started in the same second apart.
+- **Format:** JSON Lines. Each flush appends, so a crash loses only what was still waiting ([[recording-cost]]). The fields are in [[event-schema]].
+- **Escaping:** Neovim 0.10's `vim.json.encode` writes `/` as `\/`. Storage undoes that, but only when the running Neovim escapes (checked once at load). Newer versions don't escape, and backslashes in search patterns survive either way.
 
-- One file per session under `vim.fn.stdpath("data") .. "/melomotion/"`.
-- JSON Lines, one event per line, so a crashed session still leaves a readable file and the files are easy to process with other tools.
-- Each event has a timestamp, the kind of event, the keys that caused it ([[event-sources]]), the buffer's file path, and the cursor position.
-
-What isn't stored: buffer text. Search patterns and file paths are stored, and they can be sensitive, so recordings stay on the local machine. melomotion never sends them anywhere.
-
-Writes happen off the hot path ([[recording-cost]]).
+Buffer text is never stored. File paths are, and so are search patterns and the `:` commands that moved you. Files are only ever written to `dir`.

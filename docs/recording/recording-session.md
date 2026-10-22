@@ -1,6 +1,6 @@
 ---
 title: Recording session
-status: planned
+status: stable
 tags: [recording]
 up: "[[recording]]"
 updated: 2026-10-22
@@ -8,21 +8,20 @@ updated: 2026-10-22
 
 # Recording session
 
-Recording is opt-in. Nothing is recorded until you start it.
+Recording is opt-in. Nothing is recorded until you start it, unless `autostart` is set ([[configuration]]). One session writes one file ([[storage]]).
 
-| Command            | Does                                                     |
-| ------------------ | -------------------------------------------------------- |
-| `:Melomotion start`  | Registers the hooks ([[event-sources]]) and starts a session |
-| `:Melomotion stop`   | Removes the hooks and writes the session to disk           |
-| `:Melomotion save`   | Writes what's buffered so far and keeps recording          |
+| Command              | Does                                                |
+| -------------------- | --------------------------------------------------- |
+| `:Melomotion start`  | Opens a session file and attaches the hooks         |
+| `:Melomotion stop`   | Detaches the hooks and writes everything left       |
+| `:Melomotion toggle` | Start or stop                                       |
+| `:Melomotion save`   | Writes what's waiting and keeps recording           |
+| `:Melomotion status` | Shows the file and how many records are written     |
 
-These are subcommands of one user command ([[commands-and-keymaps]]). Each also gets a `<Plug>(melomotion-…)` mapping.
+Each one except `status` has a `<Plug>(melomotion-…)` mapping ([[commands-and-keymaps]]).
 
-A session that's still running when Neovim exits is written on `VimLeavePre`.
+- `stop` first runs a [[command-cycle]] that's still waiting, so a jump in the last command isn't lost.
+- A session still running when Neovim exits is stopped on `VimLeavePre`.
+- The old `:MelomotionStart` and `:MelomotionSave` are gone ([[adr-0005-merge-into-melomotion]]).
 
-How recordings are read back afterwards (an in-editor report, or an export for other tools) is open: [[open-questions]].
-
-## Related
-
-- [[storage]]
-- [[recording-cost]]
+How recordings are read back is still open: [[open-questions]].

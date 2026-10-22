@@ -1,6 +1,6 @@
 ---
 title: Development
-status: planned
+status: stable
 tags: [hub, development]
 up: "[[index]]"
 updated: 2026-10-22
@@ -8,6 +8,6 @@ updated: 2026-10-22
 
 # Development
 
-- [[tooling]]: formatter, linter, type checks (none chosen yet)
-- [[testing]]: how tests will run
+- [[tooling]]: `make check`, StyLua, luacheck
+- [[testing]]: child-Neovim tests, and running one file or one case
 - [[local-dev-loop]]: running this checkout in Neovim

@@ -1,6 +1,6 @@
 ---
 title: Edit filtering
-status: planned
+status: stable
 tags: [recording]
 up: "[[recording]]"
 updated: 2026-10-22
@@ -8,14 +8,12 @@ updated: 2026-10-22
 
 # Edit filtering
 
-Normal-mode edits move the cursor too (`dd`, `p`, `J`, `u`), and those moves fire `CursorMoved` like any motion. melomotion drops them by watching `b:changedtick`.
+When a [[command-cycle]] ends in the same window and buffer it started in, the movement is dropped if any of these hold:
 
-- Each buffer keeps the last `vim.b.changedtick` melomotion saw.
-- On a movement event, if `changedtick` went up since the previous event, an edit caused the move. Drop it, clear the pending keys ([[event-sources]]), and store the new tick.
-- Otherwise it's movement. Record it.
+- **`changedtick` went up.** An edit moved the cursor (`dd`, `p`, `u`, `J`, `>>`). A change from somewhere else, like format-on-save, also bumps it. `TextChanged` schedules a cycle for those, so the baseline catches up before your next motion.
+- **The skip flag is set.** `ModeChanged` sets it when you enter operator-pending mode (which covers `yk`), when you leave insert, replace or terminal mode (`<Esc>` steps the cursor left), and when you leave visual mode (visual `y` jumps back to the start of the selection).
+- **You're in insert, replace or terminal mode.** The window scrolled while you typed.
 
-`changedtick` also goes up when a buffer is reloaded from disk or modified by a plugin. Those moves get dropped as well, which is fine: you didn't move.
+A dropped cycle also throws away its keys, so `dw` followed by `j` records just `j`.
 
-## Related
-
-- [[what-counts-as-movement]]
+Switching window or buffer is never filtered: switching is always navigation. Landing from a picker skips these checks too ([[picker-landing]]).

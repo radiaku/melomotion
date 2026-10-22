@@ -1,99 +1,289 @@
+-- Records movement: the keys you pressed and where they took you. Edits are left out.
+--
+-- Keys are collected by vim.on_key while a command runs. When the command has finished,
+-- end_cycle() (scheduled from the first key) compares where you are with where you were and
+-- emits one event. docs/recording/ explains each rule below.
+local api = vim.api
+
 local M = {}
-M.recording = false
-M.motion_log = {}
 
-local ns_id = vim.api.nvim_create_namespace("melomotion")
+local ns = api.nvim_create_namespace("melomotion")
+local group = "melomotion.recorder"
 
-function M.start()
-  if M.recording then return end
-  M.recording = true
+-- Caps the keys kept for one command, so a held-down key can't grow the list forever.
+local MAX_PENDING = 64
+local MOUSE_MOVE = vim.keycode("<MouseMove>")
 
-  local raw_buffer = ""
-  local buffer_time = nil
-  local buffer_timeout = 0.4 -- seconds
+---@class melomotion.Location
+---@field tab integer
+---@field win integer
+---@field buf integer
+---@field tick integer
+---@field file string
+---@field ft string
+---@field line integer
+---@field col integer
+---@field top integer
 
-  vim.on_key(function(char)
-    local mode = vim.api.nvim_get_mode().mode
-    if vim.tbl_contains({ "i", "ic", "ix", "t", "c" }, mode) then return end
+---@class melomotion.State
+---@field emit fun(event: table)
+---@field async_window integer
+---@field last melomotion.Location?
+---@field pending (string|string[])[] Raw typed keys, or { text } for a finished command line.
+---@field orphan { keys: string, via: string?, at: number }? Last keys that moved nothing.
+---@field via string? Filetype of the float (picker) visited since the last cycle.
+---@field skip boolean The cursor moved because of an operator or a mode change, not a motion.
+---@field scheduled boolean
 
-    local now = os.clock()
-    raw_buffer = raw_buffer .. char
+---@type melomotion.State?
+local state = nil
 
-    -- local char_decoded = vim.fn.keytrans(char)
-    -- vim.notify(("[melomotion] individual char_decoded: %s"):format(vim.inspect(char_decoded)))
+local function is_float(win)
+  return api.nvim_win_get_config(win).relative ~= ""
+end
 
-    local decoded = vim.fn.keytrans(raw_buffer)
-    -- vim.notify(("[melomotion] char: %s"):format(vim.inspect(char)))
-    -- vim.notify(("[melomotion] raw_buffer: %s"):format(vim.inspect(raw_buffer)))
-    -- vim.notify(("[melomotion] decoded: %s"):format(vim.inspect(decoded)))
+local function is_text_mode(mode)
+  local c = mode:sub(1, 1)
+  return c == "i" or c == "R" or c == "t"
+end
 
-    if decoded:match("<t_") then
-      -- vim.notify("[melomotion] ⛔ Skipping Plug mapping: " .. vim.inspect(decoded))
-      raw_buffer = ""
-     return
-    end
+local function is_visual(mode)
+  local c = mode:sub(1, 1)
+  return c == "v" or c == "V" or c == "\22" or c == "s" or c == "S" or c == "\19"
+end
 
-    if buffer_time and (now - buffer_time > buffer_timeout) then
-      -- vim.notify("[melomotion] 🟡 Flushing buffer due to timeout")
+local function short_mode(mode)
+  local c = mode:sub(1, 1)
+  if c == "\22" then
+    return "^V"
+  elseif c == "\19" then
+    return "^S"
+  end
+  return c
+end
 
-      if #decoded > 0 then
-        table.insert(M.motion_log, {
-          key = decoded,
-          time = buffer_time
-        })
-      end
-      raw_buffer = ""
-    end
+---@return melomotion.Location
+local function locate(win)
+  local buf = api.nvim_win_get_buf(win)
+  local cursor = api.nvim_win_get_cursor(win)
+  return {
+    tab = api.nvim_win_get_tabpage(win),
+    win = win,
+    buf = buf,
+    tick = api.nvim_buf_get_changedtick(buf),
+    file = api.nvim_buf_get_name(buf),
+    ft = vim.bo[buf].filetype,
+    line = cursor[1],
+    col = cursor[2],
+    top = vim.fn.line("w0", win),
+  }
+end
 
-    buffer_time = now
-  end, ns_id)
+local function public(loc)
+  return { file = loc.file, ft = loc.ft, line = loc.line, col = loc.col, top = loc.top }
+end
 
-  M._flush_buffer = function()
-    if raw_buffer and #raw_buffer > 0 then
-      local decoded = vim.fn.keytrans(raw_buffer)
-      -- vim.notify("[melomotion] 🔵 Final flush on stop/save")
-      -- vim.notify(("[melomotion] decoded flush: %s"):format(vim.inspect(decoded)))
-
-      table.insert(M.motion_log, {
-        key = decoded,
-        time = buffer_time
-      })
-    end
-    raw_buffer = ""
+local function kind_of(from, to)
+  if from.tab ~= to.tab then
+    return "tab"
+  elseif from.win ~= to.win then
+    return "window"
+  elseif from.buf ~= to.buf then
+    return "buffer"
+  elseif from.line ~= to.line or from.col ~= to.col then
+    return "cursor"
+  elseif from.top ~= to.top then
+    return "scroll"
   end
 end
 
-
-
-function M.stop()
-  if not M.recording then return end
-  M.recording = false
-  vim.on_key(nil, ns_id)
-  if M._flush_buffer then M._flush_buffer() end
+local function keys_text(pending)
+  local out = {}
+  for i, k in ipairs(pending) do
+    out[i] = type(k) == "table" and k[1] or vim.fn.keytrans(k)
+  end
+  return table.concat(out)
 end
 
-function M.save(filepath)
-  if filepath == nil or filepath == "" then
-    local state_dir = vim.fn.stdpath("state")
-    filepath = state_dir .. "/melomotion.txt"
+local function end_cycle()
+  local st = state
+  if not st then
+    return
   end
+  st.scheduled = false
 
-  vim.fn.mkdir(vim.fn.fnamemodify(filepath, ":h"), "p")
-
-  local f, err = io.open(filepath, "a")
-  if not f then
-    vim.notify("Melomotion: Failed to save to file:\n" .. err, vim.log.levels.ERROR)
+  -- Still inside a command: an operator waiting for its motion, or a command line being typed.
+  local mode = api.nvim_get_mode().mode
+  if mode:sub(1, 2) == "no" or mode:sub(1, 1) == "c" then
     return
   end
 
-  for _, e in ipairs(M.motion_log) do
-    f:write(string.format("%s %.3f\n", e.key, e.time))
+  -- In a picker or popup: keep the keys that opened it for wherever it lands.
+  local win = api.nvim_get_current_win()
+  if is_float(win) then
+    local ft = vim.bo[api.nvim_win_get_buf(win)].filetype
+    st.via = ft ~= "" and ft or "float"
+    return
   end
 
-  f:close()
-  vim.notify("Melomotion: Saved motion log to:\n" .. filepath)
+  local prev, loc = st.last, locate(win)
+  local pending, via, skip = st.pending, st.via, st.skip
+  st.last, st.pending, st.via, st.skip = loc, {}, nil, false
+  if not prev then
+    return
+  end
 
-  M.stop()
+  -- Staying in the same window and buffer, the cursor also moves for edits, operators and
+  -- leaving insert or visual mode. None of that is navigation. A picker landing always is.
+  if not via and prev.win == loc.win and prev.buf == loc.buf then
+    if skip or prev.tick ~= loc.tick or is_text_mode(mode) then
+      return
+    end
+  end
+
+  local kind = kind_of(prev, loc)
+  if not kind then
+    -- Nothing moved yet, but the jump may still come (LSP requests answer later).
+    if #pending > 0 then
+      st.orphan = { keys = keys_text(pending), via = via, at = vim.uv.hrtime() / 1e6 }
+    end
+    return
+  end
+
+  local keys, async = keys_text(pending), nil
+  if keys == "" and st.orphan and vim.uv.hrtime() / 1e6 - st.orphan.at <= st.async_window then
+    keys, via, async = st.orphan.keys, via or st.orphan.via, true
+  end
+  st.orphan = nil
+
+  st.emit({
+    kind = kind,
+    keys = keys,
+    mode = short_mode(mode),
+    from = public(prev),
+    to = public(loc),
+    via = via,
+    async = async,
+  })
+end
+
+local function schedule_end()
+  local st = state
+  if st and not st.scheduled then
+    st.scheduled = true
+    vim.schedule(end_cycle)
+  end
+end
+
+local function on_key(_, typed)
+  local st = state
+  if not st or not typed or typed == "" or typed == MOUSE_MOVE then
+    return
+  end
+  -- Keys typed in insert, replace, terminal, command-line or prompt modes are text.
+  local c = api.nvim_get_mode().mode:sub(1, 1)
+  if c == "i" or c == "R" or c == "t" or c == "c" or c == "r" then
+    return
+  end
+  if #st.pending < MAX_PENDING then
+    st.pending[#st.pending + 1] = typed
+  end
+  schedule_end()
+end
+
+local function on_mode_changed()
+  local st = state
+  if not st or is_float(api.nvim_get_current_win()) then
+    return
+  end
+  local old, new = vim.v.event.old_mode, vim.v.event.new_mode
+  if
+    new:sub(1, 2) == "no"
+    or (is_text_mode(old) and not is_text_mode(new))
+    or (is_visual(old) and not is_visual(new))
+  then
+    st.skip = true
+    schedule_end()
+  end
+end
+
+local function on_cmdline_leave()
+  local st = state
+  if not st then
+    return
+  end
+  -- Replace the ":", "/" or "?" you typed with the whole line, so ":42" reads as ":42".
+  local ev = vim.v.event
+  local t = ev.cmdtype
+  if not ev.abort and (t == ":" or t == "/" or t == "?") and st.pending[#st.pending] == t then
+    st.pending[#st.pending] = { t .. vim.fn.getcmdline() }
+  end
+  schedule_end()
+end
+
+local function on_win_enter()
+  local st = state
+  if not st then
+    return
+  end
+  local win = api.nvim_get_current_win()
+  if is_float(win) then
+    local ft = vim.bo[api.nvim_win_get_buf(win)].filetype
+    st.via = ft ~= "" and ft or "float"
+  end
+  schedule_end()
+end
+
+--- Starts recording. `emit` gets one table per movement.
+---@param emit fun(event: table)
+---@param opts? { async_window?: integer }
+function M.start(emit, opts)
+  if state then
+    return
+  end
+  opts = opts or {}
+  state = {
+    emit = emit,
+    async_window = opts.async_window or 2000,
+    pending = {},
+    skip = false,
+    scheduled = false,
+  }
+  local win = api.nvim_get_current_win()
+  if not is_float(win) then
+    state.last = locate(win)
+  end
+
+  local id = api.nvim_create_augroup(group, { clear = true })
+  api.nvim_create_autocmd({ "CursorMoved", "WinScrolled", "BufEnter", "TextChanged" }, {
+    group = id,
+    callback = function()
+      schedule_end()
+    end,
+  })
+  api.nvim_create_autocmd("WinEnter", { group = id, callback = on_win_enter })
+  api.nvim_create_autocmd("ModeChanged", { group = id, callback = on_mode_changed })
+  api.nvim_create_autocmd("CmdlineLeave", { group = id, callback = on_cmdline_leave })
+  vim.on_key(on_key, ns)
+end
+
+--- Stops recording and removes every hook. A movement still waiting for its command to end
+--- is recorded first.
+function M.stop()
+  if not state then
+    return
+  end
+  if state.scheduled then
+    end_cycle()
+  end
+  state = nil
+  vim.on_key(nil, ns)
+  api.nvim_del_augroup_by_name(group)
+end
+
+---@return boolean
+function M.is_running()
+  return state ~= nil
 end
 
 return M

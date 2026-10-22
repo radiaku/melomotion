@@ -1,6 +1,6 @@
 ---
 title: Recording
-status: planned
+status: stable
 tags: [hub, recording]
 up: "[[index]]"
 updated: 2026-10-22
@@ -8,11 +8,15 @@ updated: 2026-10-22
 
 # Recording
 
-What melomotion records and how ([[adr-0003-record-movement-not-edits]]). The aim is to see how you move to and reach things in Neovim when you aren't editing.
+What melomotion records and how ([[adr-0003-record-movement-not-edits]]). The aim is to see how you move to and reach things in Neovim when you aren't editing. The code is `lua/melomotion/recorder.lua`.
 
 - [[what-counts-as-movement]]: where movement ends and editing starts
-- [[event-sources]]: which Neovim hooks capture which movement
-- [[edit-filtering]]: dropping cursor moves that edits cause
-- [[recording-cost]]: keeping hot hooks cheap
+- [[command-cycle]]: one event per finished command, and why that works
+- [[event-sources]]: which hooks feed the recorder
+- [[edit-filtering]]: dropping cursor moves caused by edits and operators
+- [[picker-landing]]: crediting a picker's result to the keys that opened it
+- [[late-jumps]]: crediting jumps that arrive after their command
+- [[recording-cost]]: keeping per-key work tiny
 - [[recording-session]]: start, stop, save
-- [[storage]]: where recordings go and in what format
+- [[storage]]: where session files go
+- [[event-schema]]: what one recorded line contains

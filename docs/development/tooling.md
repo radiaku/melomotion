@@ -1,6 +1,6 @@
 ---
 title: Tooling
-status: planned
+status: stable
 tags: [development]
 up: "[[development]]"
 updated: 2026-10-22
@@ -8,18 +8,12 @@ updated: 2026-10-22
 
 # Tooling
 
-Nothing is chosen yet. Candidates:
+| Command          | Does |
+| ---------------- | ---- |
+| `make check`     | `fmt-check`, then `lint`, then `test`. Run it before every commit. |
+| `make test`      | Runs the mini.test suite ([[testing]]). The first run clones mini.nvim into `deps/`. |
+| `make lint`      | luacheck on `lua/`, `plugin/` and `tests/` (`.luacheckrc`) |
+| `make fmt`       | StyLua rewrites files in place (`.stylua.toml`) |
+| `make fmt-check` | StyLua reports unformatted files without changing them |
 
-| Job    | Candidates                                     |
-| ------ | ---------------------------------------------- |
-| Format | StyLua                                         |
-| Lint   | selene, luacheck                               |
-| Types  | lua-language-server `--check` ([[type-annotations]]) |
-| Tests  | see [[testing]]                                |
-
-Once a tool is picked:
-
-1. Commit its config file.
-2. Put its exact command under Commands in `CLAUDE.md`.
-3. Record the choice as an ADR ([[decisions]]) and remove it from [[open-questions]].
-4. Set this note's status to `stable`.
+StyLua and luacheck come from Mason (`~/.local/share/nvim/mason/bin`), which the Makefile puts on `PATH` ([[adr-0008-stylua-and-luacheck]]). Type checking isn't wired up ([[type-annotations]]).

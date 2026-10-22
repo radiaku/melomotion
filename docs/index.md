@@ -1,6 +1,6 @@
 ---
 title: melomotion
-status: draft
+status: stable
 tags: [hub]
 updated: 2026-10-22
 ---
@@ -9,7 +9,9 @@ updated: 2026-10-22
 
 This is the root of the project's brain: a tree of small notes linked with `[[wikilinks]]`. Start here, go down to a hub, then to the note you need.
 
-melomotion is a Neovim plugin written in Lua ([[adr-0001-lua-neovim-plugin]]). It records how you move around Neovim (motions, jumps, searches, switching buffers, windows and tabs, opening files) and ignores editing, so you can see how you reach things when you aren't changing text ([[adr-0003-record-movement-not-edits]]).
+melomotion is a Neovim plugin written in Lua ([[adr-0001-lua-neovim-plugin]], [[adr-0005-merge-into-melomotion]]). It records how you move around Neovim (motions, jumps, searches, switching buffers, windows and tabs, opening files through pickers) and ignores editing, so you can see how you reach things when you aren't changing text ([[adr-0003-record-movement-not-edits]]).
+
+Where things stand: recording works and is tested. Reading recordings back is next ([[open-questions]]).
 
 ## Hubs
 

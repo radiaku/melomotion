@@ -16,7 +16,7 @@ A lot of time in Neovim goes into moving: motions, jumps, searches, switching bu
 
 ## Decision
 
-serenade records navigation and access, and ignores editing. It records how you got somewhere (the keys) and where you ended up, but never what you changed.
+melomotion records navigation and access, and ignores editing. It records how you got somewhere (the keys) and where you ended up, but never what you changed.
 
 ## Consequences
 

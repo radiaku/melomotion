@@ -8,7 +8,7 @@ updated: 2026-10-22
 
 # Event sources
 
-Autocommands report *that* you moved but not *how*. `vim.on_key` reports which keys you pressed. Serenade needs both: the key gives the cause, and the autocommand gives the effect.
+Autocommands report *that* you moved but not *how*. `vim.on_key` reports which keys you pressed. melomotion needs both: the key gives the cause, and the autocommand gives the effect.
 
 | Hook                            | Gives                                              |
 | ------------------------------- | -------------------------------------------------- |

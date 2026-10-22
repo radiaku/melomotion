@@ -8,7 +8,7 @@ updated: 2026-10-22
 
 # Recording
 
-What serenade records and how ([[adr-0003-record-movement-not-edits]]). The aim is to see how you move to and reach things in Neovim when you aren't editing.
+What melomotion records and how ([[adr-0003-record-movement-not-edits]]). The aim is to see how you move to and reach things in Neovim when you aren't editing.
 
 - [[what-counts-as-movement]]: where movement ends and editing starts
 - [[event-sources]]: which Neovim hooks capture which movement

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-nvim-serenade is a Neovim plugin written in Lua. It records how you move around Neovim (motions, jumps, searches, buffer, window and tab switches, opening files through pickers) and ignores editing, so you can see how you reach things when you aren't changing text. There's no code yet, only this file and `docs/`. Several things are still undecided, including the minimum Neovim version, the tooling and the storage format. They're listed in `docs/decisions/open-questions.md`. Don't guess at them. Ask, then record each answer as an ADR in `docs/decisions/`.
+melomotion is a Neovim plugin written in Lua. It records how you move around Neovim (motions, jumps, searches, buffer, window and tab switches, opening files through pickers) and ignores editing, so you can see how you reach things when you aren't changing text. There's no code yet, only this file and `docs/`. Several things are still undecided, including the minimum Neovim version, the tooling and the storage format. They're listed in `docs/decisions/open-questions.md`. Don't guess at them. Ask, then record each answer as an ADR in `docs/decisions/`.
 
 ## Commands
 
@@ -16,17 +16,17 @@ Until then:
 nvim --clean --cmd "set rtp^=."   # run this checkout on its own, without your config
 ```
 
-Run `:checkhealth serenade` once `lua/serenade/health.lua` exists.
+Run `:checkhealth melomotion` once `lua/melomotion/health.lua` exists.
 
 ## Architecture (planned)
 
 The layout follows Neovim's guide for Lua plugins (`:help lua-plugin`). Details are in `docs/architecture/`.
 
-- `plugin/serenade.lua` runs at startup for every user. It only defines user commands and `<Plug>` mappings, and it requires modules inside callbacks, never at the top level.
-- `require("serenade")` (`lua/serenade/init.lua`) is the public API. Every other module under `lua/serenade/` is internal.
-- `setup(opts)` is optional. It only merges user options over the defaults in `lua/serenade/config.lua`, and calling it twice must be safe.
-- There are no default keymaps. The plugin exposes `<Plug>(serenade-…)` mappings instead.
-- `doc/serenade.txt` is user help (vimdoc, `:help serenade`) and ships with the plugin. `docs/` is the maintainers' brain and doesn't ship. A user-visible change updates `doc/`. A change in design or rationale updates `docs/`.
+- `plugin/melomotion.lua` runs at startup for every user. It only defines user commands and `<Plug>` mappings, and it requires modules inside callbacks, never at the top level.
+- `require("melomotion")` (`lua/melomotion/init.lua`) is the public API. Every other module under `lua/melomotion/` is internal.
+- `setup(opts)` is optional. It only merges user options over the defaults in `lua/melomotion/config.lua`, and calling it twice must be safe.
+- There are no default keymaps. The plugin exposes `<Plug>(melomotion-…)` mappings instead.
+- `doc/melomotion.txt` is user help (vimdoc, `:help melomotion`) and ships with the plugin. `docs/` is the maintainers' brain and doesn't ship. A user-visible change updates `doc/`. A change in design or rationale updates `docs/`.
 
 ## Recording model (planned)
 
@@ -35,7 +35,7 @@ Details are in `docs/recording/`.
 - Two kinds of hook work together: `vim.on_key` gives the keys that caused a movement, and autocommands (`CursorMoved`, `WinScrolled`, `BufEnter`, `WinEnter`, `TabEnter`, `CmdlineLeave` for `/` and `?`) give its effect. A movement event takes the keys buffered since the previous one.
 - Edits are left out in two ways. `CursorMoved` never fires in insert mode, and a move made while `b:changedtick` changed comes from an edit, so it's dropped.
 - These hooks fire on nearly every key press. Inside them, only append to an in-memory list. Do file I/O on save, on stop, on `VimLeavePre` or from a timer. When recording is off, no hooks are registered at all.
-- Recording is opt-in through `:Serenade start`, `:Serenade stop` and `:Serenade save`. Recordings stay local under `stdpath("data")/serenade/`.
+- Recording is opt-in through `:Melomotion start`, `:Melomotion stop` and `:Melomotion save`. Recordings stay local under `stdpath("data")/melomotion/`.
 
 ## docs/ brain
 

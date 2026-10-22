@@ -20,16 +20,16 @@ nvim --clean --cmd "set rtp^=."
 
 ## Inside the daily config
 
-The radia config (`~/Dev/personal/nvim`) loads local plugins through lazy.nvim `dir =` specs, the same way `lua/radia/plugins/disabled/melomotion.lua` does. Put the spec in a group that gets imported (any folder except `disabled/`):
+The radia config (`~/Dev/personal/nvim`) loads local plugins through lazy.nvim `dir =` specs. A spec for this repo already exists at `lua/radia/plugins/disabled/melomotion.lua`, but `disabled/` isn't imported. Move it into a group that is, and trim it to:
 
 ```lua
 return {
-  dir = "~/Dev/personal/nvim-serenade",
-  name = "serenade",
+  dir = "~/Dev/personal/melomotion",
+  name = "melomotion",
 }
 ```
 
-After a change, restart Neovim or run `:Lazy reload serenade`.
+After a change, restart Neovim or run `:Lazy reload melomotion`.
 
 ## Related
 

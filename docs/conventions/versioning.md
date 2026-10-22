@@ -10,6 +10,6 @@ updated: 2026-10-22
 
 Releases follow SemVer and are tagged `vX.Y.Z`.
 
-The public surface is `require("serenade")`, the user commands, the `<Plug>` mappings ([[commands-and-keymaps]]) and the options ([[configuration]]). Breaking any of them needs a major version bump. Internal modules ([[plugin-layout]]) can change freely.
+The public surface is `require("melomotion")`, the user commands, the `<Plug>` mappings ([[commands-and-keymaps]]) and the options ([[configuration]]). Breaking any of them needs a major version bump. Internal modules ([[plugin-layout]]) can change freely.
 
 How releases are distributed (luarocks, or git tags only) is still open: [[open-questions]].

@@ -13,4 +13,5 @@ Each ADR records one decision and is named `adr-NNNN-short-name`. Its sections a
 - [[adr-0001-lua-neovim-plugin]]
 - [[adr-0002-docs-brain-tree]]
 - [[adr-0003-record-movement-not-edits]]
+- [[adr-0005-merge-into-melomotion]]
 - [[open-questions]]: not decided yet

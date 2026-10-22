@@ -8,7 +8,7 @@ updated: 2026-10-22
 
 # What counts as movement
 
-Serenade records anything that changes **where you are** or **what you're looking at**, and nothing that changes the text.
+melomotion records anything that changes **where you are** or **what you're looking at**, and nothing that changes the text.
 
 | Recorded                                      | Example                            |
 | --------------------------------------------- | ---------------------------------- |

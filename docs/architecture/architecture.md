@@ -14,4 +14,4 @@ Everything here is planned; no code exists yet. These notes cover the plugin's s
 - [[lazy-loading]]: keeping startup cost close to zero
 - [[configuration]]: `setup()` is optional
 - [[commands-and-keymaps]]: user commands and `<Plug>` mappings
-- [[health-check]]: `:checkhealth serenade`
+- [[health-check]]: `:checkhealth melomotion`
